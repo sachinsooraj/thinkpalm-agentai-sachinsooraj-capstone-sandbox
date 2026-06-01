@@ -202,7 +202,7 @@ LLM_MODE=mock python main.py --scenario pod-crash
 
 ## 📹 Loom Walkthrough
 
-> Link: [Add your Loom link here]
+> Link: https://www.loom.com/share/fcbbc107edac462a877ab5656433064d
 
 The walkthrough demonstrates:
 1. CLI run showing full ReAct trace
