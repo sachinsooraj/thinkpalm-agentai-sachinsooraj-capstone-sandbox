@@ -52,7 +52,7 @@ def print_banner():
     console.print()
     console.print(Panel.fit(
         "[bold cyan]🤖 InfraGPT[/bold cyan] — [white]Multi-Agent DevOps Incident Response Pipeline[/white]\n"
-        "[dim]Triage Agent + Remediation Agent + Persistent Memory[/dim]",
+        "[dim]Triage Agent + Remediation Agent + Report Agent + Persistent Memory[/dim]",
         border_style="cyan",
         padding=(0, 2),
     ))
@@ -70,7 +70,8 @@ def render_event(event: dict):
 
     elif etype == "phase":
         phase = event["phase"].upper()
-        icon = "🔍" if event["phase"] == "triage" else "🔧"
+        icons = {"triage": "🔍", "remediation": "🔧", "report": "📊"}
+        icon = icons.get(event["phase"], "⚡")
         console.print()
         console.print(Rule(f"{icon} [bold {color}]PHASE: {phase} AGENT[/bold {color}]", style=color))
 
@@ -210,9 +211,29 @@ def render_event(event: dict):
             border_style="green dim",
         ))
 
+    elif etype == "report":
+        rpt = event["report"]
+        console.print()
+        t = Table(box=box.ROUNDED, border_style="green", show_header=False, padding=(0, 1))
+        t.add_column("Key", style="bold green", width=22)
+        t.add_column("Value")
+        t.add_row("Incident ID", f"[yellow]{rpt['incident_id']}[/yellow]")
+        t.add_row("Generated", rpt["generated_at"])
+        t.add_row("Severity", f"[bold]{rpt['severity']}[/bold]")
+        t.add_row("Impact", rpt["impact"][:120] + "...")
+        console.print(Panel(t, title="[bold green]📊 INCIDENT REPORT[/bold green]", border_style="green"))
+        console.print("\n  [bold green]Executive Summary:[/bold green]")
+        console.print(f"    {rpt['executive_summary'][:300]}...")
+        console.print("\n  [bold green]📊 Slack Alert:[/bold green]")
+        console.print(Panel(event.get("slack_alert", ""), border_style="blue dim", padding=(0, 1)))
+        if event.get("timeline"):
+            console.print("\n  [bold green]📅 Timeline:[/bold green]")
+            for tl in event["timeline"][:5]:
+                console.print(f"    [dim]{tl}[/dim]")
+
     elif etype == "done":
         console.print()
-        console.print(Rule("[bold green]✅ Pipeline Complete[/bold green]", style="green"))
+        console.print(Rule("[bold green]✅ All 3 Agents Complete[/bold green]", style="green"))
         console.print()
 
 

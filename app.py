@@ -54,6 +54,7 @@ section[data-testid="stSidebar"] { background: #161b22 !important; border-right:
 }
 .badge-triage    { background: #0d419d; color: #79c0ff; border: 1px solid #1f6feb; }
 .badge-remediation { background: #6e40c9; color: #d2a8ff; border: 1px solid #8957e5; }
+.badge-report    { background: #1a3a2a; color: #56d364; border: 1px solid #238636; }
 .badge-orch      { background: #1a4a1a; color: #56d364; border: 1px solid #238636; }
 
 /* Step cards */
@@ -202,7 +203,8 @@ with st.sidebar:
     st.markdown("## 🤖 InfraGPT")
     st.markdown(
         "<span class='badge badge-triage'>Triage Agent</span> &nbsp; "
-        "<span class='badge badge-remediation'>Remediation Agent</span>",
+        "<span class='badge badge-remediation'>Remediation Agent</span> &nbsp; "
+        "<span class='badge badge-report'>Report Agent</span>",
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -254,6 +256,7 @@ st.markdown("# 🤖 InfraGPT — Multi-Agent Incident Response")
 st.markdown(
     "<span class='badge badge-triage'>🔍 Triage Agent</span> &nbsp;"
     "<span class='badge badge-remediation'>🔧 Remediation Agent</span> &nbsp;"
+    "<span class='badge badge-report'>📊 Report Agent</span> &nbsp;"
     "<span class='badge badge-orch'>⚡ Persistent Memory</span>",
     unsafe_allow_html=True,
 )
@@ -261,7 +264,7 @@ st.markdown(
 m1, m2, m3, m4 = st.columns(4)
 mem_count  = st.session_state.get("mem_total", 0)
 step_count = st.session_state.get("steps_count", 0)
-with m1: st.markdown("<div class='metric-box'><div class='metric-val'>2</div><div class='metric-lbl'>Active Agents</div></div>", unsafe_allow_html=True)
+with m1: st.markdown("<div class='metric-box'><div class='metric-val'>3</div><div class='metric-lbl'>Active Agents</div></div>", unsafe_allow_html=True)
 with m2: st.markdown("<div class='metric-box'><div class='metric-val'>8</div><div class='metric-lbl'>Tools Available</div></div>", unsafe_allow_html=True)
 with m3: st.markdown(f"<div class='metric-box'><div class='metric-val'>{mem_count}</div><div class='metric-lbl'>Memory Incidents</div></div>", unsafe_allow_html=True)
 with m4: st.markdown(f"<div class='metric-box'><div class='metric-val'>{step_count}</div><div class='metric-lbl'>ReAct Steps Run</div></div>", unsafe_allow_html=True)
@@ -300,6 +303,11 @@ with col_remediation:
 st.markdown("---")
 mem_placeholder = st.empty()
 
+# ── Report Agent panel (below the 2-col layout) ───────────────────────────────
+st.markdown("")
+st.markdown("<span class='badge badge-report' style='font-size:0.95rem;padding:4px 12px'>📊 REPORT AGENT</span>", unsafe_allow_html=True)
+report_placeholder = st.empty()
+
 # ── Streaming state ────────────────────────────────────────────────────────────
 from agents.orchestrator import Orchestrator
 
@@ -308,11 +316,13 @@ progress = st.progress(0, text="Starting pipeline...")
 
 triage_html      = ""
 remediation_html = ""
+report_html      = ""
 current_step     = 0
 mem_total        = 0
 final_plan       = None
 final_diagnosis  = None
 final_tf_snippet = None
+final_report_obj = None
 
 TOTAL_STEPS = 14  # approximate
 
@@ -345,9 +355,12 @@ for event in orch.run(incident):
         if agent == "triage":
             triage_html += f"<div style='color:#8b949e;font-size:0.82rem;padding:4px 0'>{event['msg']}</div>"
             render_triage(triage_html)
-        else:
+        elif agent == "remediation":
             remediation_html += f"<div style='color:#8b949e;font-size:0.82rem;padding:4px 0'>{event['msg']}</div>"
             render_remediation(remediation_html)
+        else:
+            report_html += f"<div style='color:#8b949e;font-size:0.82rem;padding:4px 0'>{event['msg']}</div>"
+            report_placeholder.markdown(report_html, unsafe_allow_html=True)
         current_step += 1
         progress.progress(pct(current_step), text=event["msg"])
 
@@ -499,9 +512,40 @@ for event in orch.run(incident):
         st.session_state["mem_total"]    = mem_total
         st.session_state["steps_count"] = current_step
 
+    # ── report ──
+    elif etype == "report" and agent == "report":
+        rpt = event["report"]
+        final_report_obj = event.get("object")
+        timeline_items = "".join(
+            f"<div style='font-size:0.8rem;color:#8b949e;padding:3px 0;border-left:2px solid #30363d;padding-left:8px;margin:3px 0'>{tl}</div>"
+            for tl in event.get("timeline", [])
+        )
+        slack_escaped = event.get("slack_alert", "").replace("<", "&lt;").replace(">", "&gt;")
+        report_html += (
+            f"<div style='background:#0d1117;border:1px solid #238636;border-radius:10px;padding:14px;margin-top:8px'>"
+            f"<div style='display:flex;align-items:center;gap:10px;margin-bottom:10px'>"
+            f"<b style='color:#56d364'>📊 INCIDENT REPORT</b>"
+            f"<code style='font-size:0.78rem;color:#e3b341'>{rpt['incident_id']}</code>"
+            f"<span style='color:#8b949e;font-size:0.78rem'>{rpt['generated_at']}</span>"
+            f"</div>"
+            f"<div class='section-header'>Executive Summary</div>"
+            f"<div style='font-size:0.84rem;color:#e6edf3;line-height:1.5'>{rpt['executive_summary']}</div>"
+            f"<div class='section-header' style='margin-top:10px'>Impact</div>"
+            f"<div style='font-size:0.83rem;color:#ffa657'>{rpt['impact']}</div>"
+            f"<div class='section-header' style='margin-top:10px'>Incident Timeline</div>"
+            f"{timeline_items}"
+            f"<div class='section-header' style='margin-top:10px'>📣 Slack Alert (copy-paste ready)</div>"
+            f"<pre style='background:#161b22;border:1px solid #30363d;border-radius:6px;padding:10px;"
+            f"font-size:0.78rem;color:#79c0ff;white-space:pre-wrap'>{slack_escaped}</pre>"
+            f"</div>"
+        )
+        report_placeholder.markdown(report_html, unsafe_allow_html=True)
+        current_step += 1
+        progress.progress(pct(current_step), text=f"Report {rpt['incident_id']} generated")
+
     # ── done ──
     elif etype == "done":
-        progress.progress(100, text="Pipeline complete!")
+        progress.progress(100, text="✅ All 3 agents complete!")
 
 # ── Post-run extras ────────────────────────────────────────────────────────────
 if final_diagnosis:
