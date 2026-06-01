@@ -1,0 +1,32 @@
+{
+  "pod-crash": {
+    "id": "pod-crash",
+    "title": "API Pod CrashLoopBackOff",
+    "description": "Production alert: pod api-server-7d9f in namespace production is CrashLoopBackOff. High CPU on node-01. Service degraded.",
+    "severity_hint": "HIGH",
+    "node": "node-01",
+    "namespace": "production",
+    "pod": "api-server-7d9f",
+    "emoji": "💥"
+  },
+  "disk-pressure": {
+    "id": "disk-pressure",
+    "title": "Node Disk Pressure Critical",
+    "description": "Alert: node-02 disk usage at 97%. Kubernetes scheduling new pods is failing with DiskPressure taint. Applications may crash.",
+    "severity_hint": "HIGH",
+    "node": "node-02",
+    "namespace": "default",
+    "pod": "log-collector-xk9p",
+    "emoji": "💾"
+  },
+  "tf-drift": {
+    "id": "tf-drift",
+    "title": "Terraform Infrastructure Drift",
+    "description": "CI pipeline detected Terraform state drift: S3 bucket mlops-model-registry-bucket-prod-xyz has unexpected configuration changes. Versioning disabled, public access unblocked.",
+    "severity_hint": "MEDIUM",
+    "node": "node-01",
+    "namespace": "infra",
+    "pod": "terraform-runner-a1b2",
+    "emoji": "🔧"
+  }
+}
